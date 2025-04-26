@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "972913259673",
+    "project_id": "growkart-5cc34",
+    "storage_bucket": "growkart-5cc34.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972913259673:android:fecd86794e3350aaf6b408",
+        "android_client_info": {
+          "package_name": "com.example.growkart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzeh3Hfs7k2IKW2UJojKvHhAyAzdi9k3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
