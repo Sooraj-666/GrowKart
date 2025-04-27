@@ -244,7 +244,7 @@ class FarmerOrdersPageState extends State<FarmerOrdersPage> {
                                   color: Colors.grey[700]),
                             ),
                             Text(
-                              "${deliveryAddress.street}\n${deliveryAddress.city}, ${deliveryAddress.state}\n${deliveryAddress.pincode}",
+                              "${deliveryAddress.street}\n${deliveryAddress.landmark}\n${deliveryAddress.city}, ${deliveryAddress.state}\n${deliveryAddress.pincode}",
                               style: const TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 10),
