@@ -163,6 +163,10 @@ class ProductListingPageState extends State<ProductListingPage> {
                                 Text("₹${doc["price"] ?? 0.0}", style: const TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.w500)),
                                 Text(doc["description"] ?? "No Description Available", style: const TextStyle(fontSize: 14)),
                                 const SizedBox(height: 10),
+                                // Display farm name and farmer username
+                                Text("Farm: ${farmerData['farmName'] ?? 'Unknown Farm'}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                Text("Username: @${farmerData['username'] ?? ''}", style: const TextStyle(fontSize: 14)),
+                                const SizedBox(height: 10),
                                 Text("Farmer: ${farmerData["name"] ?? "Unknown Farmer"}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                                 Text("Phone: ${farmerData["phone"] ?? "N/A"}", style: const TextStyle(fontSize: 14)),
                                 Text("Place: ${farmerData["place"] ?? "Unknown"}", style: const TextStyle(fontSize: 14)),

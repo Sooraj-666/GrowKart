@@ -4,6 +4,7 @@ import 'package:growkart/screens/farmer_profile_screen.dart';
 import 'package:growkart/screens/farmer_products_screen.dart';
 import 'package:growkart/screens/farmer_orders_page.dart';
 import 'package:growkart/screens/farmer_earnings_page.dart';
+import '../services/chat_service.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -34,6 +35,7 @@ class FarmerDashboardState extends State<FarmerDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: CustomScrollView(
@@ -42,6 +44,36 @@ class FarmerDashboardState extends State<FarmerDashboard> {
             expandedHeight: 200.0,
             floating: false,
             pinned: true,
+            actions: [
+              StreamBuilder<int>(
+                stream: ChatService.getTotalUnread(currentUserId),
+                builder: (context, snapshot) {
+                  final unread = snapshot.data ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chat),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const FarmerOrdersPage()),
+                        ),
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                            child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 12), textAlign: TextAlign.center),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
                 "GrowKart Farmer",

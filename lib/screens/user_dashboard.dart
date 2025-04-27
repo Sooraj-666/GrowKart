@@ -5,12 +5,15 @@ import 'cart_page.dart';
 import 'user_orders_page.dart';
 import 'purchased_items_page.dart';
 import 'complaint_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/chat_service.dart';
 
 class UserDashboard extends StatelessWidget {
   const UserDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: CustomScrollView(
@@ -19,6 +22,36 @@ class UserDashboard extends StatelessWidget {
             expandedHeight: 200.0,
             floating: false,
             pinned: true,
+            actions: [
+              StreamBuilder<int>(
+                stream: ChatService.getTotalUnread(currentUserId),
+                builder: (context, snapshot) {
+                  final unread = snapshot.data ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chat),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const UserOrdersPage()),
+                        ),
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                            child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 12), textAlign: TextAlign.center),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
                 "GrowKart",

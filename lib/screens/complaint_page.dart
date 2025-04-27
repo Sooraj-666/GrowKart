@@ -11,7 +11,7 @@ class ComplaintPage extends StatefulWidget {
 
 class _ComplaintPageState extends State<ComplaintPage> {
   final _formKey = GlobalKey<FormState>();
-  final _farmerNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _complaintController = TextEditingController();
   bool _isSubmitting = false;
 
@@ -26,7 +26,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
         if (user != null) {
           await FirebaseFirestore.instance.collection('complaints').add({
             'userId': user.uid,
-            'farmerName': _farmerNameController.text.trim(),
+            'farmerUsername': _usernameController.text.trim(),
             'complaint': _complaintController.text.trim(),
             'status': 'pending',
             'createdAt': FieldValue.serverTimestamp(),
@@ -63,7 +63,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
 
   @override
   void dispose() {
-    _farmerNameController.dispose();
+    _usernameController.dispose();
     _complaintController.dispose();
     super.dispose();
   }
@@ -92,9 +92,9 @@ class _ComplaintPageState extends State<ComplaintPage> {
               ),
               const SizedBox(height: 20),
               TextFormField(
-                controller: _farmerNameController,
+                controller: _usernameController,
                 decoration: InputDecoration(
-                  labelText: 'Farmer Name',
+                  labelText: 'Farmer Username',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -103,7 +103,7 @@ class _ComplaintPageState extends State<ComplaintPage> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the farmer name';
+                    return 'Please enter the farmer username';
                   }
                   return null;
                 },

@@ -91,7 +91,7 @@ class LoginScreenState extends State<LoginScreen> {
           } else {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("User role not found! Contact support.")),
+                const SnackBar(content: Text("User role not found!")),
               );
             }
           }

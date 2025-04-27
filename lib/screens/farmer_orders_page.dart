@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/delivery_address.dart';
 import 'dart:developer' as dev;
+import 'chat_screen.dart';
 
 class FarmerOrdersPage extends StatefulWidget {
   const FarmerOrdersPage({super.key});
@@ -211,6 +212,7 @@ class FarmerOrdersPageState extends State<FarmerOrdersPage> {
                                 if (userSnapshot.connectionState == ConnectionState.waiting) {
                                   return const SizedBox();
                                 }
+
                                 if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
                                   return const SizedBox();
                                 }
@@ -232,6 +234,27 @@ class FarmerOrdersPageState extends State<FarmerOrdersPage> {
                                       style: TextStyle(fontSize: 14),
                                     ),
                                     const SizedBox(height: 10),
+                                    // Chat button for farmer to message user
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 10),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => ChatScreen(chatId: orderId),
+                                                ),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.chat_bubble),
+                                            label: const Text('Chat User'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 );
                               },

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/delivery_address.dart';
 import 'dart:developer' as dev;
+import './chat_screen.dart'; // Import the ChatScreen widget
 
 class UserOrdersPage extends StatefulWidget {
   const UserOrdersPage({super.key});
@@ -316,6 +317,32 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.red,
                                         side: const BorderSide(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (status != 'pending')
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        String chatId = order.id; // reuse order ID
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(chatId: chatId),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.chat_bubble_outline),
+                                      label: const Text("Chat Farmer"),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blueGrey,
+                                        foregroundColor: Colors.white,
                                       ),
                                     ),
                                   ],
