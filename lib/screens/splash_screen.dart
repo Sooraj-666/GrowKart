@@ -1,6 +1,12 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:growkart/screens/login_screen.dart';
+import 'package:growkart/screens/user_dashboard.dart';
+import 'package:growkart/screens/farmer_dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,12 +19,23 @@ class SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+    Timer(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data() != null) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserDashboard()));
+        } else {
+          final farmerDoc = await FirebaseFirestore.instance.collection('farmers').doc(user.uid).get();
+          if (farmerDoc.exists && farmerDoc.data() != null) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FarmerDashboard()));
+          } else {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+          }
+        }
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       }
     });
   }
@@ -29,15 +46,15 @@ class SplashScreenState extends State<SplashScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1B5E20), Color(0xFF66BB6A)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Color(0xFF222222)],
           ),
         ),
         child: Center(
           child: Card(
-            elevation: 4,
-            color: Colors.white.withOpacity(0.85),
+            elevation: 8,
+            color: const Color(0xFF111111).withOpacity(0.8),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -46,8 +63,8 @@ class SplashScreenState extends State<SplashScreen> {
                 children: [
                   Image.asset(
                     'assets/images/growkart_logo.png',
-                    width: 120,
-                    height: 120,
+                    width: 200,
+                    height: 200,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 24),

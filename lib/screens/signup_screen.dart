@@ -28,6 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _farmNameController = TextEditingController();
   final TextEditingController _farmLocationController = TextEditingController();
   final TextEditingController _cropTypeController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
   File? _certificateFile;
   String? _certificateFileName;
@@ -61,6 +62,19 @@ class _SignupScreenState extends State<SignupScreen> {
   void _signup() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_role == "Farmer") {
+      final username = _usernameController.text.trim();
+      if (username.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Enter a username")));
+        return;
+      }
+      final snap = await _firestore.collection('farmers').where('username', isEqualTo: username).get();
+      if (snap.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Username already taken")));
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -86,12 +100,13 @@ class _SignupScreenState extends State<SignupScreen> {
         };
 
         if (_role == "Farmer") {
+          userData['username'] = _usernameController.text.trim();
           userData.addAll({
             "farm_name": _farmNameController.text.trim(),
             "farm_location": _farmLocationController.text.trim(),
             "crop_type": _cropTypeController.text.trim(),
             "certificate_url": certificateUrl,
-            "status": "pending", // Admin verification required
+            "status": "pending",
           });
           await _firestore.collection('farmers').doc(user.uid).set(userData);
         } else {
@@ -116,6 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(title: const Text("Signup"), backgroundColor: Colors.green),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -163,7 +179,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         /// Farmer-Specific Fields
                         if (_role == "Farmer") ...[
-                          TextFormField(controller: _farmNameController, decoration: const InputDecoration(labelText: "Farm Name"), validator: (value) => value!.isEmpty ? "Enter farm name" : null),
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: const InputDecoration(labelText: "Username"),
+                            validator: (value) => value!.isEmpty ? "Enter a username" : null,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _farmNameController,
+                            decoration: const InputDecoration(labelText: "Farm Name"),
+                            validator: (value) => value!.isEmpty ? "Enter farm name" : null,
+                          ),
                           const SizedBox(height: 10),
                           ElevatedButton(onPressed: _pickCertificate, child: const Text("Upload Certificate (PDF)")),
                           if (_certificateFileName != null) Text("Selected: $_certificateFileName", style: TextStyle(color: Colors.green)),

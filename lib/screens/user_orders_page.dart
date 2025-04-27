@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -289,7 +291,7 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(status).withOpacity(0.1),
+                                color: _getStatusColor(status).withAlpha((0.1 * 255).round()),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
@@ -319,6 +321,41 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                                   ],
                                 ),
                               ),
+                            if (status == 'delivered')
+                              if (data['rating'] == null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () => _showFeedbackDialog(order.id, data['farmerId'] ?? ''),
+                                        icon: const Icon(Icons.rate_review),
+                                        label: const Text("Give Feedback"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else ...[
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: List.generate(
+                                    5,
+                                    (i) => Icon(
+                                      i < (data['rating'] ?? 0) ? Icons.star : Icons.star_border,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  data['feedback'] ?? '',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ],
                             // Fetch and display farmer details for each user order
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance
@@ -464,5 +501,100 @@ class UserOrdersPageState extends State<UserOrdersPage> {
         );
       }
     }
+  }
+
+  Future<void> _showFeedbackDialog(String orderId, String farmerId) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    int selectedRating = 5;
+    final TextEditingController feedbackController = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("Rate Your Experience"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    5,
+                    (index) => IconButton(
+                      icon: Icon(
+                        index < selectedRating ? Icons.star : Icons.star_border,
+                        color: Colors.orange,
+                      ),
+                      onPressed: () => setState(() => selectedRating = index + 1),
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: feedbackController,
+                  decoration: const InputDecoration(
+                    labelText: 'Feedback',
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(currentUser.uid)
+                        .collection('orders')
+                        .doc(orderId)
+                        .update({
+                      'rating': selectedRating,
+                      'feedback': feedbackController.text.trim(),
+                      'feedbackAt': FieldValue.serverTimestamp(),
+                    });
+                    await FirebaseFirestore.instance
+                        .collection('farmers')
+                        .doc(farmerId)
+                        .collection('orders')
+                        .doc(orderId)
+                        .update({
+                      'rating': selectedRating,
+                      'feedback': feedbackController.text.trim(),
+                      'feedbackAt': FieldValue.serverTimestamp(),
+                    });
+                    await FirebaseFirestore.instance
+                        .collection('orders')
+                        .doc(orderId)
+                        .update({
+                      'rating': selectedRating,
+                      'feedback': feedbackController.text.trim(),
+                      'feedbackAt': FieldValue.serverTimestamp(),
+                    });
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Feedback submitted")),
+                    );
+                    setState(() {});
+                  } catch (e) {
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error submitting feedback: $e")),
+                    );
+                  }
+                },
+                child: const Text("Submit"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }

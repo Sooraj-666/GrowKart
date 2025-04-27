@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -131,31 +133,6 @@ class FarmerProductsScreenState extends State<FarmerProductsScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to add product: $e")),
-      );
-    }
-  }
-
-  Future<void> _deleteProduct(String productId, String imageUrl) async {
-    if (!mounted) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection("products")
-          .doc(productId)
-          .delete();
-
-      if (imageUrl.isNotEmpty) {
-        Reference imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
-        await imageRef.delete();
-      }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Product deleted successfully")),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete product: $e")),
       );
     }
   }
@@ -541,17 +518,75 @@ class FarmerProductsScreenState extends State<FarmerProductsScreen> {
                                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           visualDensity: VisualDensity.compact,
                                         ),
+                                      const SizedBox(height: 8),
+                                      StreamBuilder<QuerySnapshot>(
+                                        stream: FirebaseFirestore.instance
+                                            .collection('orders')
+                                            .where('productId', isEqualTo: doc.id)
+                                            .where('rating', isGreaterThan: 0)
+                                            .snapshots(),
+                                        builder: (context, reviewSnapshot) {
+                                          if (!reviewSnapshot.hasData || reviewSnapshot.data!.docs.isEmpty) {
+                                            return const Text(
+                                              'No reviews yet',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                                            );
+                                          }
+                                          final reviews = reviewSnapshot.data!.docs;
+                                          final total = reviews.length;
+                                          final sum = reviews.fold<int>(0, (a, e) => a + ((e.data() as Map<String, dynamic>)['rating'] as int));
+                                          final avg = (sum / total).toStringAsFixed(1);
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.star, color: Colors.orange, size: 16),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    avg,
+                                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    ' ($total)',
+                                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              ...reviews
+                                                  .take(2)
+                                                  .map((e) {
+                                                final data = e.data() as Map<String, dynamic>;
+                                                final userName = data['userName'] ?? '';
+                                                final feedback = data['feedback'] ?? '';
+                                                final userRating = data['rating'] ?? 0;
+                                                return Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(userName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                                    Row(
+                                                      children: List.generate(
+                                                        5,
+                                                        (i) => Icon(i < userRating ? Icons.star : Icons.star_border, color: Colors.orange, size: 12),
+                                                      ),
+                                                    ),
+                                                    Text(feedback, style: const TextStyle(fontSize: 12)),
+                                                    const SizedBox(height: 8),
+                                                  ],
+                                                );
+                                              }),
+                                              if (reviews.length > 2)
+                                                TextButton(
+                                                  onPressed: () {},
+                                                  child: const Text('View all reviews', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                                                ),
+                                            ],
+                                          );
+                                        },
+                                      ),
                                     ],
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _deleteProduct(
-                                      doc.id,
-                                      data["imageUrl"] ?? "",
-                                    ),
                                   ),
                                 );
                               },

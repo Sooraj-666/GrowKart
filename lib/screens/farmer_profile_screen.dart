@@ -22,6 +22,7 @@ class FarmerProfileScreenState extends State<FarmerProfileScreen> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
   final TextEditingController farmNameController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
 
   File? _profileImage;
   String? _profileImageUrl;
@@ -44,6 +45,7 @@ class FarmerProfileScreenState extends State<FarmerProfileScreen> {
           await _firestore.collection('farmers').doc(user.uid).get();
       if (farmerDoc.exists && mounted) {
         setState(() {
+          usernameController.text = farmerDoc['username'] ?? '';
           nameController.text = farmerDoc['name'] ?? '';
           phoneController.text = farmerDoc['phone'] ?? '';
           locationController.text = farmerDoc['location'] ?? '';
@@ -85,6 +87,7 @@ class FarmerProfileScreenState extends State<FarmerProfileScreen> {
       }
 
       await _firestore.collection('farmers').doc(user.uid).set({
+        'username': usernameController.text,
         'name': nameController.text,
         'phone': phoneController.text,
         'location': locationController.text,
@@ -225,6 +228,7 @@ class FarmerProfileScreenState extends State<FarmerProfileScreen> {
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
+                            _buildTextField(usernameController, 'Username', Icons.person, TextInputType.text, (value) => value == null || value.isEmpty ? 'Enter a username' : null),
                             _buildTextField(nameController, 'Name', Icons.person),
                             _buildTextField(phoneController, 'Phone', Icons.phone, TextInputType.phone, (value) {
                               if (value == null || value.isEmpty) return 'Phone is required';

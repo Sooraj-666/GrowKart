@@ -166,6 +166,74 @@ class ProductListingPageState extends State<ProductListingPage> {
                                 Text("Farmer: ${farmerData["name"] ?? "Unknown Farmer"}", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                                 Text("Phone: ${farmerData["phone"] ?? "N/A"}", style: const TextStyle(fontSize: 14)),
                                 Text("Place: ${farmerData["place"] ?? "Unknown"}", style: const TextStyle(fontSize: 14)),
+                                const SizedBox(height: 10),
+                                // Display average rating and review count
+                                StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('orders')
+                                      .where('productId', isEqualTo: doc.id)
+                                      .where('rating', isGreaterThan: 0)
+                                      .snapshots(),
+                                  builder: (context, ratingSnapshot) {
+                                    if (!ratingSnapshot.hasData || ratingSnapshot.data!.docs.isEmpty) {
+                                      return const Text(
+                                        'No ratings yet',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      );
+                                    }
+                                    final reviews = ratingSnapshot.data!.docs;
+                                    final total = reviews.length;
+                                    final sum = reviews.fold<int>(0, (a, e) => a + ((e.data() as Map<String, dynamic>)['rating'] as int));
+                                    final avg = (sum / total).toStringAsFixed(1);
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.star, color: Colors.orange, size: 16),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              avg,
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              ' ($total)',
+                                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        ...reviews
+                                            .take(2)
+                                            .map((e) {
+                                          final data = e.data() as Map<String, dynamic>;
+                                          final userName = data['userName'] ?? '';
+                                          final feedback = data['feedback'] ?? '';
+                                          final userRating = data['rating'] ?? 0;
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(userName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                              Row(
+                                                children: List.generate(
+                                                  5,
+                                                  (i) => Icon(i < userRating ? Icons.star : Icons.star_border, color: Colors.orange, size: 12),
+                                                ),
+                                              ),
+                                              Text(feedback, style: const TextStyle(fontSize: 12)),
+                                              const SizedBox(height: 8),
+                                            ],
+                                          );
+                                        }),
+                                        if (reviews.length > 2)
+                                          TextButton(
+                                            onPressed: () {},
+                                            child: const Text('View all reviews', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                                          ),
+                                      ],
+                                    );
+                                  },
+                                ),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: ElevatedButton(
