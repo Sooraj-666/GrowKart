@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/delivery_address.dart';
+import 'dart:math';
 import 'dart:developer' as dev;
 import 'chat_screen.dart';
 
@@ -317,12 +318,21 @@ class FarmerOrdersPageState extends State<FarmerOrdersPage> {
                                 ),
                               const SizedBox(height: 10),
                               ElevatedButton.icon(
-                                onPressed: () => _updateOrderStatus(
-                                    farmerId, userId, orderId, 'delivered'),
+                                onPressed: () => _sendDeliveryOtp(
+                                    farmerId, userId, orderId),
                                 icon: const Icon(Icons.local_shipping),
-                                label: const Text("Mark as Delivered"),
+                                label: const Text("Send Delivery OTP"),
                                 style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.orange),
+                              ),
+                            ] else if (orderStatus == 'otp_pending') ...[
+                              const SizedBox(height: 10),
+                              ElevatedButton.icon(
+                                onPressed: () => _showOtpDialog(farmerId, userId, orderId),
+                                icon: const Icon(Icons.lock_outline),
+                                label: const Text("Enter OTP"),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green),
                               ),
                             ],
                           ],
@@ -430,6 +440,111 @@ class FarmerOrdersPageState extends State<FarmerOrdersPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error updating order status: $e")),
       );
+    }
+  }
+
+  /// Generates and sends a delivery OTP, updating order status to otp_pending.
+  Future<void> _sendDeliveryOtp(
+    String farmerId, String userId, String orderId,
+  ) async {
+    final otp = 100000 + Random().nextInt(900000);
+    try {
+      final updateData = {
+        'status': 'otp_pending',
+        'deliveryOtp': otp,
+        'otpTimestamp': Timestamp.now(),
+      };
+      await FirebaseFirestore.instance
+          .collection("farmers")
+          .doc(farmerId)
+          .collection("orders")
+          .doc(orderId)
+          .update(updateData);
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(userId)
+          .collection("orders")
+          .doc(orderId)
+          .update(updateData);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delivery OTP sent: $otp')),
+      );
+    } catch (e) {
+      dev.log("Error sending OTP: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error sending OTP: $e")),
+      );
+    }
+  }
+
+  /// Prompt farmer to enter OTP to confirm delivery
+  Future<void> _showOtpDialog(
+    String farmerId,
+    String userId,
+    String orderId,
+  ) async {
+    final otpController = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Enter Delivery OTP'),
+        content: TextField(
+          controller: otpController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: 'OTP'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _verifyDeliveryOtp(farmerId, userId, orderId, otpController.text.trim());
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Verify OTP and finalize delivery
+  Future<void> _verifyDeliveryOtp(
+    String farmerId,
+    String userId,
+    String orderId,
+    String inputOtp,
+  ) async {
+    try {
+      final orderRef = FirebaseFirestore.instance
+          .collection('farmers')
+          .doc(farmerId)
+          .collection('orders')
+          .doc(orderId);
+      final orderDoc = await orderRef.get();
+      final storedOtp = orderDoc.data()?['deliveryOtp']?.toString() ?? '';
+      if (inputOtp == storedOtp) {
+        final updateData = {'status': 'delivered'};
+        await orderRef.update(updateData);
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('orders')
+            .doc(orderId)
+            .update(updateData);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Delivery confirmed')));
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Invalid OTP')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('OTP verification error: $e')));
     }
   }
 

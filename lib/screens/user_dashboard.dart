@@ -5,6 +5,7 @@ import 'cart_page.dart';
 import 'user_orders_page.dart';
 import 'purchased_items_page.dart';
 import 'complaint_page.dart';
+import 'notifications_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/chat_service.dart';
 
@@ -33,7 +34,7 @@ class UserDashboard extends StatelessWidget {
                         icon: const Icon(Icons.chat),
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const UserOrdersPage()),
+                          MaterialPageRoute(builder: (_) => const NotificationsPage()),
                         ),
                       ),
                       if (unread > 0)

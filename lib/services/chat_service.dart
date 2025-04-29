@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ChatService {
   static Stream<QuerySnapshot> getChatStream(String chatId) {
@@ -70,5 +72,29 @@ class ChatService {
     if (!snapshot.exists) {
       await docRef.set({'createdAt': FieldValue.serverTimestamp()});
     }
+  }
+
+  /// Add a reaction emoji to a message
+  static Future<void> addReaction(String chatId, String messageId, String emoji) async {
+    final msgRef = FirebaseFirestore.instance
+        .collection('chats').doc(chatId)
+        .collection('messages').doc(messageId);
+    await msgRef.update({'reaction': emoji});
+  }
+
+  /// Upload an attachment and return its download URL
+  static Future<String> uploadAttachment(String chatId, PlatformFile file) async {
+    final ref = FirebaseStorage.instance
+        .ref().child('chat_attachments').child(chatId).child(file.name);
+    await ref.putData(file.bytes!);
+    return await ref.getDownloadURL();
+  }
+
+  /// Delete a message from a chat
+  static Future<void> deleteMessage(String chatId, String messageId) {
+    return FirebaseFirestore.instance
+      .collection('chats').doc(chatId)
+      .collection('messages').doc(messageId)
+      .delete();
   }
 }

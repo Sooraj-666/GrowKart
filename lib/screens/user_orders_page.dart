@@ -203,6 +203,8 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                       statusMessage = "Rejected by Farmer";
                     } else if (status == 'cancelled') {
                       statusMessage = "Cancelled by You";
+                    } else if (status == 'otp_pending') {
+                      statusMessage = "OTP Pending";
                     }
 
                     return Card(
@@ -304,6 +306,19 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                                 ),
                               ),
                             ),
+                            // show OTP value to user
+                            if (status == 'otp_pending')
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  'Delivery OTP: ${data['deliveryOtp'] ?? ''}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ),
                             if (status == 'pending')
                               Padding(
                                 padding: const EdgeInsets.only(top: 16),
@@ -322,7 +337,7 @@ class UserOrdersPageState extends State<UserOrdersPage> {
                                   ],
                                 ),
                               ),
-                            if (status != 'pending')
+                            if (status != 'pending' && status != 'otp_pending')
                               Padding(
                                 padding: const EdgeInsets.only(top: 16),
                                 child: Row(
