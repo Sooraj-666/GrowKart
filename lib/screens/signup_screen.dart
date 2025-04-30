@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -22,17 +23,27 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _placeController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _farmNameController = TextEditingController();
   final TextEditingController _farmLocationController = TextEditingController();
-  final TextEditingController _cropTypeController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
 
   File? _certificateFile;
   String? _certificateFileName;
   bool _isLoading = false;
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email address';
+    }
+    // Basic email validation
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
 
   /// Picks a certificate (PDF only)
   Future<void> _pickCertificate() async {
@@ -54,22 +65,30 @@ class _SignupScreenState extends State<SignupScreen> {
       TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Certificate upload failed: ${e.toString()}")),
+      );
       return null;
     }
   }
 
-  /// Handles user signup
-  void _signup() async {
+  // OTP verification removed
+
+  /// Complete signup
+  Future<void> _verifyOTPAndSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_role == "Farmer") {
       final username = _usernameController.text.trim();
       if (username.isEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Enter a username")));
         return;
       }
       final snap = await _firestore.collection('farmers').where('username', isEqualTo: username).get();
       if (snap.docs.isNotEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Username already taken")));
         return;
       }
@@ -78,8 +97,10 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
+      // Proceed with email/password signup
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text.trim(),
       );
 
@@ -92,9 +113,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
         Map<String, dynamic> userData = {
           "name": _nameController.text.trim(),
-          "email": _emailController.text.trim(),
+          "email": email,
           "place": _placeController.text.trim(),
-          "phone": _phoneController.text.trim(),
           "role": _role,
           "uid": user.uid,
         };
@@ -104,7 +124,6 @@ class _SignupScreenState extends State<SignupScreen> {
           userData.addAll({
             "farm_name": _farmNameController.text.trim(),
             "farm_location": _farmLocationController.text.trim(),
-            "crop_type": _cropTypeController.text.trim(),
             "certificate_url": certificateUrl,
             "status": "pending",
           });
@@ -131,81 +150,254 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
-      appBar: AppBar(title: const Text("Signup"), backgroundColor: Colors.green),
+      backgroundColor: Colors.white,
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Center(
-                child: Image.asset(
-                  'assets/images/growkart_logo.png',
-                  height: 100,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // GrowKart logo at the top
+                Center(
+                  child: Image.asset(
+                    'assets/images/growkart_logo.png',
+                    height: 100,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Create Account',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green),
-              ),
-              const SizedBox(height: 30),
-              Card(
-                elevation: 4,
-                color: Colors.white.withOpacity(0.9),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        /// Role Selection (User or Farmer)
-                        Row(
-                          children: [
-                            Expanded(child: RadioListTile(title: const Text("User"), value: "User", groupValue: _role, onChanged: (value) => setState(() => _role = value.toString()))),
-                            Expanded(child: RadioListTile(title: const Text("Farmer"), value: "Farmer", groupValue: _role, onChanged: (value) => setState(() => _role = value.toString()))),
+                const SizedBox(height: 20),
+                const Text(
+                  "Create an Account",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                // Signup Card
+                Card(
+                  elevation: 4,
+                  color: Colors.white.withAlpha(230),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value: _role,
+                            decoration: InputDecoration(
+                              labelText: 'Role',
+                              prefixIcon: const Icon(Icons.person),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            items: ['User', 'Farmer'].map((role) {
+                              return DropdownMenuItem(
+                                value: role,
+                                child: Text(role),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _role = value ?? 'User';
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Full Name',
+                              prefixIcon: const Icon(Icons.person),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your full name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            validator: _validateEmail,
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              prefixIcon: const Icon(Icons.lock),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            validator: (value) {
+                              if (value != _passwordController.text) {
+                                return 'Passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _placeController,
+                            decoration: InputDecoration(
+                              labelText: 'Place',
+                              prefixIcon: const Icon(Icons.location_city),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your place';
+                              }
+                              return null;
+                            },
+                          ),
+                          if (_role == 'Farmer') ...[  // Farmer-specific fields
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _usernameController,
+                              decoration: InputDecoration(
+                                labelText: 'Username',
+                                prefixIcon: const Icon(Icons.account_circle),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a username';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _farmNameController,
+                              decoration: InputDecoration(
+                                labelText: 'Farm Name',
+                                prefixIcon: const Icon(Icons.agriculture),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your farm name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              controller: _farmLocationController,
+                              decoration: InputDecoration(
+                                labelText: 'Farm Location',
+                                prefixIcon: const Icon(Icons.location_on),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter farm location';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              onPressed: _pickCertificate,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[700],
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text(
+                                _certificateFileName ?? 'Upload Certificate',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
                           ],
-                        ),
-
-                        /// Common Fields
-                        TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: "Full Name"), validator: (value) => value!.isEmpty ? "Enter your name" : null),
-                        TextFormField(controller: _emailController, decoration: const InputDecoration(labelText: "Email"), keyboardType: TextInputType.emailAddress, validator: (value) => value!.isEmpty ? "Enter your email" : null),
-                        TextFormField(controller: _placeController, decoration: const InputDecoration(labelText: "Place"), validator: (value) => value!.isEmpty ? "Enter your place" : null),
-                        TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: "Phone Number"), keyboardType: TextInputType.phone, validator: (value) => value!.isEmpty || value.length != 10 ? "Enter a valid phone number" : null),
-                        TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: "Password"), obscureText: true, validator: (value) => value!.length < 6 ? "Password must be at least 6 characters" : null),
-                        TextFormField(controller: _confirmPasswordController, decoration: const InputDecoration(labelText: "Confirm Password"), obscureText: true, validator: (value) => value != _passwordController.text ? "Passwords do not match" : null),
-
-                        /// Farmer-Specific Fields
-                        if (_role == "Farmer") ...[
-                          TextFormField(
-                            controller: _usernameController,
-                            decoration: const InputDecoration(labelText: "Username"),
-                            validator: (value) => value!.isEmpty ? "Enter a username" : null,
-                          ),
-                          const SizedBox(height: 10),
-                          TextFormField(
-                            controller: _farmNameController,
-                            decoration: const InputDecoration(labelText: "Farm Name"),
-                            validator: (value) => value!.isEmpty ? "Enter farm name" : null,
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton(onPressed: _pickCertificate, child: const Text("Upload Certificate (PDF)")),
-                          if (_certificateFileName != null) Text("Selected: $_certificateFileName", style: TextStyle(color: Colors.green)),
+                          const SizedBox(height: 30),
+                          _isLoading
+                              ? const CircularProgressIndicator()
+                              : SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _verifyOTPAndSignup,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green[700],
+                                      padding: const EdgeInsets.symmetric(vertical: 18),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Signup',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                         ],
-
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _signup,
-                          child: _isLoading ? const CircularProgressIndicator() : const Text("Signup"),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'Already have an account? Login',
+                    style: TextStyle(color: Colors.green),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
