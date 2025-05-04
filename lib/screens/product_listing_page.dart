@@ -11,6 +11,7 @@ class ProductListingPage extends StatefulWidget {
 
 class ProductListingPageState extends State<ProductListingPage> {
   String _selectedCategory = 'All';
+  String _searchQuery = '';  // New state for search
 
   void _changeCategory(String category) {
     setState(() {
@@ -75,6 +76,20 @@ class ProductListingPageState extends State<ProductListingPage> {
       ),
       body: Column(
         children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+          ),
           Container(
             margin: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
             height: 50,
@@ -93,7 +108,14 @@ class ProductListingPageState extends State<ProductListingPage> {
                   padding: const EdgeInsets.only(right: 10),
                   child: CategoryButton(label: "Vegetables", isSelected: _selectedCategory == "Vegetables", onTap: () => _changeCategory('Vegetables')),
                 ),
-                CategoryButton(label: "Dairy", isSelected: _selectedCategory == "Dairy", onTap: () => _changeCategory('Dairy')),
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: CategoryButton(label: "Dairy", isSelected: _selectedCategory == "Dairy", onTap: () => _changeCategory('Dairy')),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: CategoryButton(label: "Fertilizer", isSelected: _selectedCategory == "Fertilizer", onTap: () => _changeCategory('Fertilizer')),
+                ),
               ],
             ),
           ),
@@ -111,8 +133,21 @@ class ProductListingPageState extends State<ProductListingPage> {
                   return const Center(child: Text("No products available"));
                 }
 
+                // Filter by search query
+                final allDocs = snapshot.data!.docs;
+                var docs = allDocs;
+                if (_searchQuery.isNotEmpty) {
+                  docs = allDocs.where((doc) {
+                    final name = (doc.data() as Map<String, dynamic>)['name']?.toString().toLowerCase() ?? '';
+                    return name.contains(_searchQuery.toLowerCase());
+                  }).toList();
+                }
+                if (docs.isEmpty) {
+                  return Center(child: Text(_searchQuery.isNotEmpty ? "No products match your search" : "No products available"));
+                }
+
                 return ListView(
-                  children: snapshot.data!.docs.map((doc) {
+                  children: docs.map((doc) {
                     Map<String, dynamic> productData = doc.data() as Map<String, dynamic>;
                     String farmerId = productData["farmerId"] ?? "";
                     

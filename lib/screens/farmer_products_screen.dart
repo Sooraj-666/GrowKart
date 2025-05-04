@@ -24,7 +24,7 @@ class FarmerProductsScreenState extends State<FarmerProductsScreen> {
   String _selectedCategory = 'All';
   bool _isLoading = false;
   
-  final List<String> _categories = ['All', 'Fruits', 'Vegetables', 'Dairy'];
+  final List<String> _categories = ['All', 'Fruits', 'Vegetables', 'Dairy', 'Fertilizer'];
 
   Future<void> _pickImage() async {
     try {
